@@ -1,0 +1,15 @@
+[tool.poetry]
+name = "maven-settings-decoder"
+version = "0.1.0"
+description = "Decode mavens settings.xml file"
+authors = ["Steven Van Ingelgem <steven@vaningelgem.be>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
