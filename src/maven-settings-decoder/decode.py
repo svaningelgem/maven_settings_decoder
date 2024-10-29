@@ -10,6 +10,12 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.exceptions import InvalidTag
 
 
+# Links:
+# https://github.com/codehaus-plexus/plexus-sec-dispatcher/blob/master/src/main/java/org/codehaus/plexus/components/secdispatcher/internal/cipher/AESGCMNoPadding.java
+# https://github.com/codehaus-plexus/plexus-cipher/blob/f6bf735f66ee75038cdc2365f83b239fbd46cc14/src/main/java/org/codehaus/plexus/components/cipher/internal/AESGCMNoPadding.java
+# https://github.com/apache/maven/blob/master/impl/maven-cli/src/main/java/org/apache/maven/cling/invoker/mvnenc/goals/Encrypt.java#L45
+# https://github.com/apache/maven/blob/2a6fc5ab6766d0a6837422a78bab3040c32a8d8d/compat/maven-settings-builder/src/main/java/org/apache/maven/settings/crypto/MavenSecDispatcher.java#L42
+
 def get_password_from_curly_braces(pwd: str) -> bytes | str:
     """Extract and decode password from Maven's curly brace format."""
     if not pwd:
@@ -83,7 +89,8 @@ def read_settings_security(file_path: Path) -> bytes | str | None:
     try:
         tree = ET.parse(file_path)
         root = tree.getroot()
-        if master_elem := root.find('.//master'):
+        master_elem = root.find('.//master')
+        if master_elem is not None:
             return get_password_from_curly_braces(master_elem.text)
         return None
     except Exception as e:
