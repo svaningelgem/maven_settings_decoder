@@ -1,165 +1,251 @@
 from __future__ import annotations
 
-import argparse
 import base64
 import re
 import xml.etree.ElementTree as ET
+from dataclasses import dataclass
 from pathlib import Path
+from typing import List, Optional
 
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
-from loguru import logger
 
-# Links:
-# https://github.com/sonatype/plexus-cipher/blob/master/src/main/java/org/sonatype/plexus/components/cipher/PBECipher.java
-# https://github.com/apache/maven/blob/master/impl/maven-cli/src/main/java/org/apache/maven/cling/invoker/mvnenc/goals/Encrypt.java#L45
-# https://github.com/apache/maven/blob/2a6fc5ab6766d0a6837422a78bab3040c32a8d8d/compat/maven-settings-builder/src/main/java/org/apache/maven/settings/crypto/MavenSecDispatcher.java#L42
+__all__ = ['MavenServer', 'MavenPasswordDecoder', 'MavenDecodeError']
 
 
-def get_password_from_curly_braces(pwd: str) -> bytes | str:
-    """Extract and decode password from Maven's curly brace format."""
-    if not pwd:
-        return pwd
-    if match := re.search(r".*?[^\\]?\{(.*?[^\\])}.*", pwd):
-        return base64.b64decode(match.group(1))
-    return pwd
+@dataclass
+class MavenServer:
+    """
+    Represents credentials for a Maven server.
+
+    Attributes:
+        id (str): Server identifier
+        username (str): Username for authentication
+        password (str): Encrypted or plain password
+        decrypted_password (Optional[str]): Decrypted password if available
+    """
+    id: str
+    username: str
+    password: str
+    decrypted_password: Optional[str] = None
 
 
-def decrypt(encryptedText: bytes | str, password: str) -> str:
-    if not isinstance(encryptedText, bytes):
-        encryptedText = get_password_from_curly_braces(encryptedText)
-
-    total_len = len(encryptedText)
-    salt = encryptedText[:8]
-    pad_len = encryptedText[8]
-    encrypted_length = total_len - 8 - 1 - pad_len
-    encrypted_bytes = encryptedText[9 : 9 + encrypted_length]
-
-    key_and_iv = b""
-    result = b""
-    pwd_bytes = password.encode("utf-8")
-
-    digest = hashes.Hash(hashes.SHA256(), backend=default_backend())
-    while len(key_and_iv) < 32:  # TODO: what if I pass multiple times here?
-        digest.update(pwd_bytes)
-        if salt:
-            digest.update(salt[:8])
-        result = digest.finalize()
-        key_and_iv += result
-
-    key = key_and_iv[:16]
-    iv = key_and_iv[16:32]
-
-    cipher = Cipher(algorithms.AES(key), modes.CBC(iv), backend=default_backend())
-
-    decryptor = cipher.decryptor()
-    clear_bytes = decryptor.update(encrypted_bytes) + decryptor.finalize()
-
-    # Remove PKCS7 padding
-    padding_length = clear_bytes[-1]
-    clear_bytes = clear_bytes[:-padding_length]
-
-    return clear_bytes.decode("utf-8")
+class MavenDecodeError(ValueError):
+    """Raised when there's an error during Maven password decoding operations."""
+    pass
 
 
-def read_settings_security(file_path: Path) -> str | None:
-    """Read and extract master password from settings-security.xml."""
-    if not file_path.exists():
-        return None
+class MavenPasswordDecoder:
+    """
+    A class to handle decryption of passwords in Maven settings files.
 
-    try:
-        tree = ET.parse(file_path)
-        root = tree.getroot()
-        master_elem = root.find(".//master")
-        if master_elem is not None:
-            return master_elem.text
-    except Exception as e:
-        raise ValueError(f"Failed to read settings-security.xml: {e!s}") from e
+    This class implements the Maven password encryption scheme used in settings.xml
+    and settings-security.xml files. It supports both master password decryption
+    and server password decryption.
 
-    return None
+    Example:
+        >>> decoder = MavenPasswordDecoder()
+        >>> servers = decoder.read_credentials()
+        >>> for server in servers:
+        ...     print(f"Server {server.id}: {server.decrypted_password}")
+    """
 
+    MASTER_PASSWORD_KEY = "settings.security"
 
-def read_settings(file_path: Path) -> list[dict]:
-    """Read server credentials from settings.xml."""
-    servers = []
+    def __init__(
+            self,
+            settings_path: Path | str | None = None,
+            security_path: Path | str | None = None
+    ):
+        """
+        Initialize the decoder with paths to Maven settings files.
 
-    try:
-        tree = ET.parse(file_path)
-        root = tree.getroot()
+        Args:
+            settings_path: Path to settings.xml (defaults to ~/.m2/settings.xml)
+            security_path: Path to settings-security.xml (defaults to ~/.m2/settings-security.xml)
+        """
+        self.settings_path = Path(settings_path or Path.home() / ".m2/settings.xml")
+        self.security_path = Path(security_path or Path.home() / ".m2/settings-security.xml")
+        self._master_password: Optional[str] = None
 
-        for server in root.findall(".//server"):
-            server_data = {
-                "id": server.find("id").text if server.find("id") is not None else "",
-                "username": server.find("username").text if server.find("username") is not None else "",
-                "password": server.find("password").text if server.find("password") is not None else "",
-            }
-            servers.append(server_data)
+    @staticmethod
+    def _extract_password(pwd: str) -> bytes | str:
+        """
+        Extract and decode password from Maven's curly brace format.
 
-    except Exception as e:
-        raise ValueError(f"Failed to read settings.xml: {e!s}") from e
+        Args:
+            pwd: Encoded password string potentially wrapped in curly braces
 
-    return servers
+        Returns:
+            Decoded password bytes or original string if no encoding detected
+        """
+        if not pwd:
+            return pwd
+        if match := re.search(r".*?[^\\]?\{(.*?[^\\])}.*", pwd):
+            pwd = base64.b64decode(match.group(1))
+        if isinstance(pwd, bytes):
+            return pwd
+        return pwd.encode('utf8')
 
+    def _decrypt(self, encrypted_text: bytes | str, password: str) -> str:
+        """
+        Decrypt Maven encrypted text using the provided password.
 
-def print_passwords(settings_file: Path, security_file: Path):
-    """Print decrypted server credentials."""
-    try:
-        master_password = read_settings_security(security_file)
-        if master_password:
-            logger.info(f"Master password (raw): {master_password}")
-            if isinstance(master_password, bytes):
-                logger.info(f"Master password length: {len(master_password)} bytes")
+        Args:
+            encrypted_text: The encrypted text to decrypt
+            password: Password to use for decryption
 
-        servers = read_settings(settings_file)
+        Returns:
+            Decrypted string
 
-        if not servers:
-            logger.info("No servers found in settings.xml")
-            return
+        Raises:
+            MavenDecodeError: If decryption fails
+        """
+        try:
+            if not isinstance(encrypted_text, bytes):
+                encrypted_text = self._extract_password(encrypted_text)
 
-        if master_password:
-            decrypted = decrypt(master_password, "settings.security")
-            logger.info(f"Decrypted master password: {decrypted}")
+            # Parse the encrypted data structure
+            total_len = len(encrypted_text)
+            salt = encrypted_text[:8]
+            pad_len = encrypted_text[8]
+            encrypted_length = total_len - 8 - 1 - pad_len
+            encrypted_bytes = encrypted_text[9:9 + encrypted_length]
+
+            # Generate key and IV
+            key_and_iv = b""
+            pwd_bytes = self._extract_password(password)
+
+            while len(key_and_iv) < 32:
+                digest = hashes.Hash(hashes.SHA256(), backend=default_backend())
+                digest.update(pwd_bytes)
+                if salt:
+                    digest.update(salt[:8])
+                key_and_iv += digest.finalize()
+
+            key = key_and_iv[:16]
+            iv = key_and_iv[16:32]
+
+            # Decrypt using AES-CBC
+            cipher = Cipher(algorithms.AES(key), modes.CBC(iv), backend=default_backend())
+            decryptor = cipher.decryptor()
+            clear_bytes = decryptor.update(encrypted_bytes) + decryptor.finalize()
+
+            # Remove PKCS7 padding
+            padding_length = clear_bytes[-1]
+            clear_bytes = clear_bytes[:-padding_length]
+
+            return clear_bytes.decode("utf-8")
+
+        except Exception as e:
+            raise MavenDecodeError(f"Failed to decrypt: {str(e)}") from e
+
+    def _read_servers(self) -> List[MavenServer]:
+        """
+        Read server credentials from settings.xml.
+
+        Returns:
+            List of MavenServer objects
+
+        Raises:
+            MavenDecodeError: If reading or parsing the settings file fails
+        """
+        try:
+            tree = ET.parse(self.settings_path)
+            root = tree.getroot()
+            servers = []
+
+            for server in root.findall(".//server"):
+                server_data = MavenServer(
+                    id=server.find("id").text if server.find("id") is not None else "",
+                    username=server.find("username").text if server.find("username") is not None else "",
+                    password=server.find("password").text if server.find("password") is not None else "",
+                )
+                servers.append(server_data)
+
+            return servers
+
+        except Exception as e:
+            raise MavenDecodeError(f"Failed to read settings.xml: {str(e)}") from e
+
+    def read_credentials(self) -> List[MavenServer]:
+        """
+        Read and decrypt all server credentials from Maven settings files.
+
+        This method reads both the settings.xml and settings-security.xml files,
+        decrypts the passwords using the master password if available, and returns
+        a list of server credentials.
+
+        Returns:
+            List of MavenServer objects with decrypted passwords
+
+        Raises:
+            MavenDecodeError: If reading or decrypting fails
+        """
+        if not self.settings_path.exists():
+            raise MavenDecodeError(f"settings.xml not found at {self.settings_path}")
+
+        # Get master password if available
+        self._master_password = self.get_master_password()
+
+        # Read and decrypt server credentials
+        servers = self._read_servers()
 
         for server in servers:
-            if not server["password"]:
-                decoded_password = ""
-            elif master_password is None:
-                decoded_password = server["password"]
+            if not server.password:
+                server.decrypted_password = ""
+            elif self._master_password is None:
+                server.decrypted_password = server.password
             else:
                 try:
-                    logger.debug(f"Decrypting password for {server['id']}:")
-                    logger.debug(f"Encrypted password: {server['password']}")
-
-                    decoded_password = decrypt(server["password"], decrypted)
-
-                    logger.debug("Decryption successful")
+                    server.decrypted_password = self._decrypt(
+                        server.password,
+                        self._master_password
+                    )
                 except Exception as e:
-                    decoded_password = f"<Error decrypting: {e!s}>"
+                    server.decrypted_password = f"<Error decrypting: {str(e)}>"
 
-            logger.info(f"Credentials for server {server['id']}:")
-            logger.info(f"Username: {server['username']}")
-            logger.info(f"Password: {decoded_password}")
-            logger.info("-" * 73)
+        return servers
 
-    except Exception as e:
-        logger.info(f"Error processing files: {e!s}")
+    def get_raw_master_password(self) -> Optional[str]:
+        """
+        Get the encrypted master password from settings-security.xml.
 
+        Returns:
+            The encrypted master password string or None if not found
 
-def main():
-    parser = argparse.ArgumentParser(description="Decrypt Maven settings.xml passwords")
-    parser.add_argument("-s", "--settings-security", help="Path to settings-security.xml file", default=Path.home() / ".m2/settings-security.xml", type=Path)
-    parser.add_argument("-f", "--settings", help="Path to settings.xml file", default=Path.home() / ".m2/settings.xml", type=Path)
+        Raises:
+            MavenDecodeError: If reading the security file fails
+        """
 
-    args = parser.parse_args()
+        if not self.security_path.exists():
+            return None
 
-    if not args.settings.exists():
-        logger.error(f"settings.xml file not found at {args.settings}")
-        return
+        try:
+            tree = ET.parse(self.security_path)
+            root = tree.getroot()
+            master_elem = root.find(".//master")
 
-    print_passwords(args.settings, args.settings_security)
+            if master_elem is not None and master_elem.text:
+                return master_elem.text
 
+        except Exception as e:
+            raise MavenDecodeError(f"Failed to read settings-security.xml: {str(e)}") from e
 
-if __name__ == "__main__":
-    main()
+        return None
+
+    def get_master_password(self) -> Optional[str]:
+        """
+        Get the decrypted master password.
+
+        Returns:
+            The decrypted master password or None if not found
+
+        Raises:
+            MavenDecodeError: If decryption fails
+        """
+        raw_master = self.get_raw_master_password()
+        if raw_master:
+            return self._decrypt(raw_master, self.MASTER_PASSWORD_KEY)
+        return None
