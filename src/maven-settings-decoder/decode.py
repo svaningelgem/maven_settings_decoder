@@ -5,13 +5,12 @@ import re
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional
 
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
-__all__ = ['MavenServer', 'MavenPasswordDecoder', 'MavenDecodeError']
+__all__ = ["MavenServer", "MavenPasswordDecoder", "MavenDecodeError"]
 
 
 @dataclass
@@ -24,16 +23,17 @@ class MavenServer:
         username (str): Username for authentication
         password (str): Encrypted or plain password
         decrypted_password (Optional[str]): Decrypted password if available
+
     """
+
     id: str
     username: str
     password: str
-    decrypted_password: Optional[str] = None
+    decrypted_password: str | None = None
 
 
 class MavenDecodeError(ValueError):
     """Raised when there's an error during Maven password decoding operations."""
-    pass
 
 
 class MavenPasswordDecoder:
@@ -49,25 +49,23 @@ class MavenPasswordDecoder:
         >>> servers = decoder.read_credentials()
         >>> for server in servers:
         ...     print(f"Server {server.id}: {server.decrypted_password}")
+
     """
 
     MASTER_PASSWORD_KEY = "settings.security"
 
-    def __init__(
-            self,
-            settings_path: Path | str | None = None,
-            security_path: Path | str | None = None
-    ):
+    def __init__(self, settings_path: Path | str | None = None, security_path: Path | str | None = None):
         """
         Initialize the decoder with paths to Maven settings files.
 
         Args:
             settings_path: Path to settings.xml (defaults to ~/.m2/settings.xml)
             security_path: Path to settings-security.xml (defaults to ~/.m2/settings-security.xml)
+
         """
         self.settings_path = Path(settings_path or Path.home() / ".m2/settings.xml")
         self.security_path = Path(security_path or Path.home() / ".m2/settings-security.xml")
-        self._master_password: Optional[str] = None
+        self._master_password: str | None = None
 
     @staticmethod
     def _extract_password(pwd: str) -> bytes | str:
@@ -79,6 +77,7 @@ class MavenPasswordDecoder:
 
         Returns:
             Decoded password bytes or original string if no encoding detected
+
         """
         if not pwd:
             return pwd
@@ -86,7 +85,7 @@ class MavenPasswordDecoder:
             pwd = base64.b64decode(match.group(1))
         if isinstance(pwd, bytes):
             return pwd
-        return pwd.encode('utf8')
+        return pwd.encode("utf8")
 
     def _decrypt(self, encrypted_text: bytes | str, password: str) -> str:
         """
@@ -101,6 +100,7 @@ class MavenPasswordDecoder:
 
         Raises:
             MavenDecodeError: If decryption fails
+
         """
         try:
             if not isinstance(encrypted_text, bytes):
@@ -111,7 +111,7 @@ class MavenPasswordDecoder:
             salt = encrypted_text[:8]
             pad_len = encrypted_text[8]
             encrypted_length = total_len - 8 - 1 - pad_len
-            encrypted_bytes = encrypted_text[9:9 + encrypted_length]
+            encrypted_bytes = encrypted_text[9 : 9 + encrypted_length]
 
             # Generate key and IV
             key_and_iv = b""
@@ -139,9 +139,9 @@ class MavenPasswordDecoder:
             return clear_bytes.decode("utf-8")
 
         except Exception as e:
-            raise MavenDecodeError(f"Failed to decrypt: {str(e)}") from e
+            raise MavenDecodeError(f"Failed to decrypt: {e!s}") from e
 
-    def _read_servers(self) -> List[MavenServer]:
+    def _read_servers(self) -> list[MavenServer]:
         """
         Read server credentials from settings.xml.
 
@@ -150,6 +150,7 @@ class MavenPasswordDecoder:
 
         Raises:
             MavenDecodeError: If reading or parsing the settings file fails
+
         """
         try:
             tree = ET.parse(self.settings_path)
@@ -164,12 +165,12 @@ class MavenPasswordDecoder:
                 )
                 servers.append(server_data)
 
-            return servers
-
         except Exception as e:
-            raise MavenDecodeError(f"Failed to read settings.xml: {str(e)}") from e
+            raise MavenDecodeError(f"Failed to read settings.xml: {e!s}") from e
 
-    def read_credentials(self) -> List[MavenServer]:
+        return servers
+
+    def read_credentials(self) -> list[MavenServer]:
         """
         Read and decrypt all server credentials from Maven settings files.
 
@@ -182,6 +183,7 @@ class MavenPasswordDecoder:
 
         Raises:
             MavenDecodeError: If reading or decrypting fails
+
         """
         if not self.settings_path.exists():
             raise MavenDecodeError(f"settings.xml not found at {self.settings_path}")
@@ -199,16 +201,13 @@ class MavenPasswordDecoder:
                 server.decrypted_password = server.password
             else:
                 try:
-                    server.decrypted_password = self._decrypt(
-                        server.password,
-                        self._master_password
-                    )
+                    server.decrypted_password = self._decrypt(server.password, self._master_password)
                 except Exception as e:
-                    server.decrypted_password = f"<Error decrypting: {str(e)}>"
+                    server.decrypted_password = f"<Error decrypting: {e!s}>"
 
         return servers
 
-    def get_raw_master_password(self) -> Optional[str]:
+    def get_raw_master_password(self) -> str | None:
         """
         Get the encrypted master password from settings-security.xml.
 
@@ -217,8 +216,8 @@ class MavenPasswordDecoder:
 
         Raises:
             MavenDecodeError: If reading the security file fails
-        """
 
+        """
         if not self.security_path.exists():
             return None
 
@@ -231,11 +230,11 @@ class MavenPasswordDecoder:
                 return master_elem.text
 
         except Exception as e:
-            raise MavenDecodeError(f"Failed to read settings-security.xml: {str(e)}") from e
+            raise MavenDecodeError(f"Failed to read settings-security.xml: {e!s}") from e
 
         return None
 
-    def get_master_password(self) -> Optional[str]:
+    def get_master_password(self) -> str | None:
         """
         Get the decrypted master password.
 
@@ -244,6 +243,7 @@ class MavenPasswordDecoder:
 
         Raises:
             MavenDecodeError: If decryption fails
+
         """
         raw_master = self.get_raw_master_password()
         if raw_master:

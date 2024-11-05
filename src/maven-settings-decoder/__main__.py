@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
+from __future__ import annotations
 
 import argparse
 import sys
 from pathlib import Path
-from typing import Optional, Sequence
-
-from loguru import logger
+from typing import Sequence
 
 from decode import MavenDecodeError, MavenPasswordDecoder
+from loguru import logger
 
-__all__ = ['main']
+__all__ = ["main"]
 
 
-def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
+def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     """
     Parse command line arguments.
 
@@ -21,37 +21,23 @@ def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
 
     Returns:
         Parsed argument namespace
+
     """
-    parser = argparse.ArgumentParser(
-        description="Decrypt passwords in Maven settings files",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter
-    )
+    parser = argparse.ArgumentParser(description="Decrypt passwords in Maven settings files", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
     parser.add_argument(
-        "-s", "--settings",
+        "-s",
+        "--settings",
         help="Path to settings.xml file",
         type=Path,
         default=Path.home() / ".m2/settings.xml",
     )
 
-    parser.add_argument(
-        "--security",
-        help="Path to settings-security.xml file",
-        type=Path,
-        default=Path.home() / ".m2/settings-security.xml"
-    )
+    parser.add_argument("--security", help="Path to settings-security.xml file", type=Path, default=Path.home() / ".m2/settings-security.xml")
 
-    parser.add_argument(
-        "-v", "--verbose",
-        help="Enable verbose debug output",
-        action="store_true"
-    )
+    parser.add_argument("-v", "--verbose", help="Enable verbose debug output", action="store_true")
 
-    parser.add_argument(
-        "--no-color",
-        help="Disable colored output",
-        action="store_true"
-    )
+    parser.add_argument("--no-color", help="Disable colored output", action="store_true")
 
     return parser.parse_args(argv)
 
@@ -62,6 +48,7 @@ def display_master_password(decoder: MavenPasswordDecoder) -> None:
 
     Args:
         decoder: Initialized MavenPasswordDecoder instance
+
     """
     if decoder.security_path.exists():
         logger.debug("Master Password Information:")
@@ -82,7 +69,7 @@ def display_master_password(decoder: MavenPasswordDecoder) -> None:
         logger.debug(f"No settings-security.xml found at: {decoder.security_path}")
 
 
-def main(argv: Optional[Sequence[str]] = None) -> int:
+def main(argv: Sequence[str] | None = None) -> int:
     """
     Main entry point for the Maven password decoder script.
 
@@ -91,6 +78,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
     Returns:
         Exit code (0 for success, non-zero for errors)
+
     """
     args = parse_args(argv)
 
@@ -102,10 +90,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
     try:
         # Initialize decoder with provided paths
-        decoder = MavenPasswordDecoder(
-            settings_path=args.settings,
-            security_path=args.security
-        )
+        decoder = MavenPasswordDecoder(settings_path=args.settings, security_path=args.security)
 
         # Log file paths in debug mode
         logger.debug(f"Settings file: {args.settings}")
@@ -135,8 +120,6 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             logger.info(f"Password: {server.decrypted_password}")
             logger.info("-" * 50)
 
-        return 0
-
     except MavenDecodeError as e:
         logger.error(f"Failed to decode Maven passwords: {e}")
         if args.verbose:
@@ -152,6 +135,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         if args.verbose:
             logger.exception("Detailed error information:")
         return 1
+
+    return 0
 
 
 if __name__ == "__main__":
