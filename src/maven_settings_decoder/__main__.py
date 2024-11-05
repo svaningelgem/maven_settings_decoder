@@ -6,8 +6,9 @@ import sys
 from pathlib import Path
 from typing import Sequence
 
-from .decode import MavenDecodeError, MavenPasswordDecoder
 from loguru import logger
+
+from .decode import MavenDecodeError, MavenPasswordDecoder
 
 __all__ = ["main"]
 

@@ -51,6 +51,7 @@ class MavenPasswordDecoder:
         ...     print(f"Server {server.id}: {server.decrypted_password}")
 
     """
+
     _NOT_SET = object()
     _MASTER_PASSWORD_KEY = "settings.security"
 

@@ -3,21 +3,16 @@ from pathlib import Path
 
 import pytest
 
-from maven_settings_decoder import (
-    MavenPasswordDecoder
-)
+from maven_settings_decoder import MavenPasswordDecoder
 
 
 def pytest_configure(config):
     """Configure pytest with custom markers."""
-    config.addinivalue_line(
-        "markers",
-        "integration: mark test as an integration test"
-    )
+    config.addinivalue_line("markers", "integration: mark test as an integration test")
 
 
 @pytest.fixture(autouse=True)
-def setup_test_env(monkeypatch, tmp_path):
+def _setup_test_env(monkeypatch, tmp_path):
     """Setup test environment for all tests."""
     monkeypatch.setenv("MAVEN_SETTINGS_PATH", str(tmp_path / "settings.xml"))
     monkeypatch.setenv("MAVEN_SECURITY_PATH", str(tmp_path / "settings-security.xml"))
@@ -77,7 +72,4 @@ def mock_security_xml(temp_dir):
 @pytest.fixture
 def decoder(mock_settings_xml, mock_security_xml):
     """Create a MavenPasswordDecoder instance with mock files."""
-    return MavenPasswordDecoder(
-        settings_path=mock_settings_xml,
-        security_path=mock_security_xml
-    )
+    return MavenPasswordDecoder(settings_path=mock_settings_xml, security_path=mock_security_xml)

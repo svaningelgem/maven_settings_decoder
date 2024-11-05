@@ -2,20 +2,12 @@ from pathlib import Path
 
 import pytest
 
-from maven_settings_decoder import (
-    MavenDecodeError, MavenPasswordDecoder,
-    MavenServer
-)
+from maven_settings_decoder import MavenDecodeError, MavenPasswordDecoder, MavenServer
 
 
 def test_maven_server_dataclass():
     """Test MavenServer dataclass initialization and attributes."""
-    server = MavenServer(
-        id="test",
-        username="user",
-        password="pass",
-        decrypted_password="decrypted"
-    )
+    server = MavenServer(id="test", username="user", password="pass", decrypted_password="decrypted")
 
     assert server.id == "test"
     assert server.username == "user"
@@ -28,10 +20,7 @@ class TestMavenPasswordDecoder:
 
     def test_initialization(self, mock_settings_xml, mock_security_xml):
         """Test decoder initialization with custom paths."""
-        decoder = MavenPasswordDecoder(
-            settings_path=mock_settings_xml,
-            security_path=mock_security_xml
-        )
+        decoder = MavenPasswordDecoder(settings_path=mock_settings_xml, security_path=mock_security_xml)
 
         assert decoder.settings_path == mock_settings_xml
         assert decoder.security_path == mock_security_xml
@@ -57,13 +46,11 @@ class TestMavenPasswordDecoder:
         """Test password extraction with encrypted format."""
         decoder = MavenPasswordDecoder()
         result = decoder._extract_password("{COQLCE6DU6GtcS5P=}")
-        assert result == b'\x08\xe4\x0b\x08N\x83S\xa1\xadq.O'
+        assert result == b"\x08\xe4\x0b\x08N\x83S\xa1\xadq.O"
 
     def test_read_master_password_missing_file(self, temp_dir):
         """Test reading master password with missing security file."""
-        decoder = MavenPasswordDecoder(
-            security_path=temp_dir / "nonexistent.xml"
-        )
+        decoder = MavenPasswordDecoder(security_path=temp_dir / "nonexistent.xml")
         assert decoder.get_master_password() is None
 
     def test_read_master_password_without_master_pass(self, temp_dir):
@@ -71,9 +58,7 @@ class TestMavenPasswordDecoder:
         newfile = temp_dir / "dummy.xml"
         newfile.write_text("<settingsSecurity />")
 
-        decoder = MavenPasswordDecoder(
-            security_path=newfile
-        )
+        decoder = MavenPasswordDecoder(security_path=newfile)
         assert decoder.get_master_password() is None
 
     def test_read_master_password_invalid_xml(self, temp_dir):
@@ -90,13 +75,11 @@ class TestMavenPasswordDecoder:
         """Test reading master password with invalid XML."""
         decoder = MavenPasswordDecoder(security_path=mock_security_xml)
 
-        assert decoder.get_master_password() == 'master'
+        assert decoder.get_master_password() == "master"
 
     def test_read_servers_missing_file(self, temp_dir):
         """Test reading servers with missing settings file."""
-        decoder = MavenPasswordDecoder(
-            settings_path=temp_dir / "nonexistent.xml"
-        )
+        decoder = MavenPasswordDecoder(settings_path=temp_dir / "nonexistent.xml")
 
         with pytest.raises(MavenDecodeError):
             decoder.read_credentials()
@@ -147,19 +130,12 @@ class TestCommandLine:
         """Test main function with valid files."""
         from maven_settings_decoder.__main__ import main
 
-        args = [
-            "--settings", str(mock_settings_xml),
-            "--security", str(mock_security_xml)
-        ]
+        args = ["--settings", str(mock_settings_xml), "--security", str(mock_security_xml)]
         assert main(args) == 0
 
     def test_main_verbose(self, mock_settings_xml, mock_security_xml):
         """Test main function with verbose option."""
         from maven_settings_decoder.__main__ import main
 
-        args = [
-            "--settings", str(mock_settings_xml),
-            "--security", str(mock_security_xml),
-            "-v"
-        ]
+        args = ["--settings", str(mock_settings_xml), "--security", str(mock_security_xml), "-v"]
         assert main(args) == 0
