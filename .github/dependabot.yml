@@ -12,11 +12,6 @@ updates:
       prefix: ci
     labels: ['skip changelog']
 
-  - package-ecosystem: "poetry"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-
   - package-ecosystem: "pip"
     directory: "/"
     schedule:
