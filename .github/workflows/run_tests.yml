@@ -3,8 +3,12 @@ name: Run tests
 on:
   push:
     branches: [ "master" ]
+    paths:
+      - '**.py'
   pull_request:
     branches: [ "master" ]
+    paths:
+      - '**.py'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

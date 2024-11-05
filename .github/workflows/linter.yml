@@ -1,0 +1,53 @@
+name: Linter
+
+on:
+  push:
+    branches: [ master ]
+    paths:
+      - '**.py'
+  pull_request:
+    branches: [ master ]
+    paths:
+      - '**.py'
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+          cache: "pip"
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: 1.5.1
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Load cached venv
+        id: cached-poetry-dependencies
+        uses: actions/cache@v3
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
+
+      - name: Install dependencies
+        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+        run: poetry install --no-interaction --no-root
+
+      - name: Install project
+        run: poetry install --no-interaction
+
+      - name: Check formatting with Ruff format
+        run: |
+          poetry run ruff format . --diff
+        continue-on-error: true  # This will show the diff but not fail the workflow
+
+      - name: Run Ruff checks
+        run: |
+          poetry run ruff check .
