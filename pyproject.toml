@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "maven-settings-decoder"
+name = "maven_settings_decoder"
 version = "0.1.0"
 description = "Decode mavens settings.xml file"
 authors = ["Steven Van Ingelgem <steven@vaningelgem.be>"]
@@ -20,7 +20,9 @@ pytest-cov = "^6.0.0"
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
-
+# Method 1: Direct reference to the main function
+[tool.poetry.scripts]
+maven-decoder = "maven_settings_decoder.__main__:main"
 
 [tool.ruff]
 line-length = 160

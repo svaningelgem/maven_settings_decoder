@@ -16,14 +16,14 @@ A Python tool to decrypt passwords in Maven settings files (`settings.xml` and `
 ### From PyPI (Recommended)
 
 ```bash
-pip install maven-settings-decoder
+pip install maven_settings_decoder
 ```
 
 ### From Source
 
 ```bash
-git clone https://github.com/yourusername/maven-settings-decoder.git
-cd maven-settings-decoder
+git clone https://github.com/svaningelgem/maven_settings_decoder.git
+cd maven_settings_decoder
 pip install -e .
 ```
 
@@ -113,6 +113,58 @@ optional arguments:
 - 0: Success
 - 1: Error (file not found, decoding error, etc.)
 - 130: User interrupted (Ctrl+C)
+## Installation and Usage
+
+### Installation
+
+```bash
+# Install from PyPI
+pip install maven_settings_decoder
+
+# Or using Poetry
+poetry add maven_settings_decoder
+```
+
+### Command Line Usage
+
+After installation, the `maven-decoder` command will be available in your environment:
+
+```bash
+# Show help
+maven-decoder --help
+
+# Decode with default paths
+maven-decoder
+
+# Decode with custom paths
+maven-decoder --settings /path/to/settings.xml --security /path/to/settings-security.xml
+
+# Enable verbose output
+maven-decoder -v
+
+# Disable colored output
+maven-decoder --no-color
+```
+
+### Development Installation
+
+For development:
+
+```bash
+# Clone the repository
+git clone https://github.com/svaningelgem/maven_settings_decoder
+cd maven_settings_decoder
+
+# Install with Poetry in development mode
+poetry install
+
+# Run the script
+poetry run maven-decoder --help
+
+# Or activate the virtual environment and run directly
+poetry shell
+maven-decoder --help
+```
 
 ## Development
 
@@ -120,8 +172,8 @@ optional arguments:
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/maven-settings-decoder.git
-cd maven-settings-decoder
+git clone https://github.com/svaningelgem/maven_settings_decoder.git
+cd maven_settings_decoder
 
 # Create and activate virtual environment (optional)
 python -m venv venv
@@ -168,7 +220,7 @@ Note: Never commit your decrypted passwords or master passwords to version contr
 If you encounter any issues or have questions, please:
 
 1. Check the [FAQ](docs/FAQ.md)
-2. Search existing [issues](https://github.com/yourusername/maven-settings-decoder/issues)
+2. Search existing [issues](https://github.com/svaningelgem/maven_settings_decoder/issues)
 3. Create a new issue if needed
 
 ## Changelog
