@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 from typing import Sequence
 
-from decode import MavenDecodeError, MavenPasswordDecoder
+from .decode import MavenDecodeError, MavenPasswordDecoder
 from loguru import logger
 
 __all__ = ["main"]
@@ -36,8 +36,6 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--security", help="Path to settings-security.xml file", type=Path, default=Path.home() / ".m2/settings-security.xml")
 
     parser.add_argument("-v", "--verbose", help="Enable verbose debug output", action="store_true")
-
-    parser.add_argument("--no-color", help="Disable colored output", action="store_true")
 
     return parser.parse_args(argv)
 
@@ -84,9 +82,6 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     if args.verbose:
         logger.level("DEBUG")
-
-    if args.no_color:
-        logger.configure(colors=False)
 
     try:
         # Initialize decoder with provided paths

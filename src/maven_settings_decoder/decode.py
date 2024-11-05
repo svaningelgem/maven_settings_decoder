@@ -51,10 +51,19 @@ class MavenPasswordDecoder:
         ...     print(f"Server {server.id}: {server.decrypted_password}")
 
     """
+    _NOT_SET = object()
+    _MASTER_PASSWORD_KEY = "settings.security"
 
-    MASTER_PASSWORD_KEY = "settings.security"
+    def _get_path(self, file: Path | str | None, default: Path) -> Path | None:
+        if file is self._NOT_SET:
+            return None
 
-    def __init__(self, settings_path: Path | str | None = None, security_path: Path | str | None = None):
+        if not file:
+            return default
+
+        return Path(file)
+
+    def __init__(self, settings_path: Path | str | None = _NOT_SET, security_path: Path | str | None = _NOT_SET):
         """
         Initialize the decoder with paths to Maven settings files.
 
@@ -63,12 +72,12 @@ class MavenPasswordDecoder:
             security_path: Path to settings-security.xml (defaults to ~/.m2/settings-security.xml)
 
         """
-        self.settings_path = Path(settings_path or Path.home() / ".m2/settings.xml")
-        self.security_path = Path(security_path or Path.home() / ".m2/settings-security.xml")
+        self.settings_path = self._get_path(settings_path, Path.home() / ".m2/settings.xml")
+        self.security_path = self._get_path(security_path, Path.home() / ".m2/settings-security.xml")
         self._master_password: str | None = None
 
     @staticmethod
-    def _extract_password(pwd: str) -> bytes | str:
+    def _extract_password(pwd: str) -> bytes | None:
         """
         Extract and decode password from Maven's curly brace format.
 
@@ -80,7 +89,7 @@ class MavenPasswordDecoder:
 
         """
         if not pwd:
-            return pwd
+            return None
         if match := re.search(r".*?[^\\]?\{(.*?[^\\])}.*", pwd):
             pwd = base64.b64decode(match.group(1))
         if isinstance(pwd, bytes):
@@ -160,8 +169,8 @@ class MavenPasswordDecoder:
             for server in root.findall(".//server"):
                 server_data = MavenServer(
                     id=server.find("id").text if server.find("id") is not None else "",
-                    username=server.find("username").text if server.find("username") is not None else "",
-                    password=server.find("password").text if server.find("password") is not None else "",
+                    username=server.find("username").text or "" if server.find("username") is not None else "",
+                    password=server.find("password").text or "" if server.find("password") is not None else "",
                 )
                 servers.append(server_data)
 
@@ -218,7 +227,7 @@ class MavenPasswordDecoder:
             MavenDecodeError: If reading the security file fails
 
         """
-        if not self.security_path.exists():
+        if not self.security_path or not self.security_path.exists():
             return None
 
         try:
@@ -247,5 +256,5 @@ class MavenPasswordDecoder:
         """
         raw_master = self.get_raw_master_password()
         if raw_master:
-            return self._decrypt(raw_master, self.MASTER_PASSWORD_KEY)
+            return self._decrypt(raw_master, self._MASTER_PASSWORD_KEY)
         return None
