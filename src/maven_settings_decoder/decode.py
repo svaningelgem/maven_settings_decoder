@@ -12,6 +12,11 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
 __all__ = ["MavenServer", "MavenPasswordDecoder", "MavenDecodeError"]
 
+# Links:
+# https://github.com/sonatype/plexus-cipher/blob/master/src/main/java/org/sonatype/plexus/components/cipher/PBECipher.java
+# https://github.com/apache/maven/blob/master/impl/maven-cli/src/main/java/org/apache/maven/cling/invoker/mvnenc/goals/Encrypt.java#L45
+# https://github.com/apache/maven/blob/2a6fc5ab6766d0a6837422a78bab3040c32a8d8d/compat/maven-settings-builder/src/main/java/org/apache/maven/settings/crypto/MavenSecDispatcher.java#L42
+
 
 @dataclass
 class MavenServer:
