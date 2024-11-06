@@ -88,7 +88,7 @@ for server in servers:
 The tool implements Maven's password encryption scheme:
 
 1. Reads the master password from `settings-security.xml`
-2. Decrypts the master password using the default key "settings.security"
+2. Decrypts the master password
 3. Uses the decrypted master password to decrypt server passwords in `settings.xml`
 4. Handles various encryption formats and edge cases
 
@@ -105,7 +105,6 @@ optional arguments:
                         Path to settings.xml file (default: ~/.m2/settings.xml)
   --security SECURITY   Path to settings-security.xml file (default: ~/.m2/settings-security.xml)
   -v, --verbose        Enable verbose debug output (default: False)
-  --no-color           Disable colored output (default: False)
 ```
 
 ## Exit Codes
@@ -141,9 +140,6 @@ maven-decoder --settings /path/to/settings.xml --security /path/to/settings-secu
 
 # Enable verbose output
 maven-decoder -v
-
-# Disable colored output
-maven-decoder --no-color
 ```
 
 ### Development Installation
@@ -166,31 +162,6 @@ poetry shell
 maven-decoder --help
 ```
 
-## Development
-
-### Setup Development Environment
-
-```bash
-# Clone the repository
-git clone https://github.com/svaningelgem/maven_settings_decoder.git
-cd maven_settings_decoder
-
-# Create and activate virtual environment (optional)
-python -m venv venv
-source venv/bin/activate  # Linux/Mac
-# or
-.\venv\Scripts\activate  # Windows
-
-# Install development dependencies
-pip install -e ".[dev]"
-```
-
-### Running Tests
-
-```bash
-pytest
-```
-
 ## Contributing
 
 1. Fork the repository
@@ -207,22 +178,21 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - Based on the encryption scheme used in [Apache Maven](https://maven.apache.org/)
 - Inspired by the Java implementation in [plexus-cipher](https://github.com/sonatype/plexus-cipher/)
-- Implementation details derived from [Maven Settings Builder](https://github.com/apache/maven/tree/master/maven-settings-builder)
+- Implementation details derived from [PBECipher](https://github.com/sonatype/plexus-cipher/blob/master/src/main/java/org/sonatype/plexus/components/cipher/PBECipher.java)
 
 ## Security
 
 This tool is meant for legitimate use cases such as debugging and auditing. Please ensure you have the necessary permissions before attempting to decrypt passwords in Maven settings files.
 
-Note: Never commit your decrypted passwords or master passwords to version control systems.
+Note: Never commit your encrypted/decrypted/master passwords to version control systems.
 
 ## Support
 
 If you encounter any issues or have questions, please:
 
-1. Check the [FAQ](docs/FAQ.md)
-2. Search existing [issues](https://github.com/svaningelgem/maven_settings_decoder/issues)
-3. Create a new issue if needed
+1. Search existing [issues](issues)
+2. Create a new issue if needed
 
 ## Changelog
 
-See [CHANGELOG.md](CHANGELOG.md) for all changes between versions.
+See [releases](releases) for all changes between versions.
