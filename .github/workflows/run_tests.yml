@@ -88,6 +88,6 @@ jobs:
           pytest --cov=maven_settings_decoder --cov-append --cov-fail-under=80 --cov-branch --cov-report=json --cov-report=term
 
       - name: Upload coverage reports to Codecov
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
