@@ -1,3 +1,3 @@
 from .decode import MavenDecodeError, MavenPasswordDecoder, MavenServer
 
-__all__ = ["MavenServer", "MavenPasswordDecoder", "MavenDecodeError"]
+__all__ = ["MavenDecodeError", "MavenPasswordDecoder", "MavenServer"]
