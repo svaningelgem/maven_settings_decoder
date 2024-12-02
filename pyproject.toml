@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "maven_settings_decoder"
-version = "0.1.1"
+version = "1.0.0"
 description = "Decode mavens settings.xml file"
 authors = ["Steven Van Ingelgem <steven@vaningelgem.be>"]
 license = "MIT"
