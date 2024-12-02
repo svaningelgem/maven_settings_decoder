@@ -4,11 +4,14 @@ from __future__ import annotations
 import argparse
 import sys
 from pathlib import Path
-from typing import Sequence
+from typing import TYPE_CHECKING
 
 from loguru import logger
 
 from .decode import MavenDecodeError, MavenPasswordDecoder
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 __all__ = ["main"]
 

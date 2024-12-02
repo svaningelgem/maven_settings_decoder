@@ -10,7 +10,7 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
-__all__ = ["MavenServer", "MavenPasswordDecoder", "MavenDecodeError"]
+__all__ = ["MavenDecodeError", "MavenPasswordDecoder", "MavenServer"]
 
 # Links:
 # https://github.com/sonatype/plexus-cipher/blob/master/src/main/java/org/sonatype/plexus/components/cipher/PBECipher.java
