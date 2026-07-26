@@ -62,7 +62,7 @@ decoder = MavenPasswordDecoder()
 # Or specify custom paths
 decoder = MavenPasswordDecoder(
     settings_path="/path/to/settings.xml",
-    security_path="/path/to/settings-security.xml"
+    security_path="/path/to/settings-security.xml",
 )
 
 # Get master password
