@@ -151,14 +151,14 @@ For development:
 git clone https://github.com/svaningelgem/maven_settings_decoder
 cd maven_settings_decoder
 
-# Install with Poetry in development mode
-poetry install
+# Install in development mode
+uv sync
 
 # Run the script
-poetry run maven-decoder --help
+uv run maven-decoder --help
 
 # Or activate the virtual environment and run directly
-poetry shell
+source .venv/bin/activate
 maven-decoder --help
 ```
 

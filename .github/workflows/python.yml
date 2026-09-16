@@ -1,0 +1,19 @@
+name: Python
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  python:
+    uses: svaningelgem/ci-workflows/.github/workflows/python.yml@v1
+    with:
+      python-versions: '["3.10", "3.11", "3.12", "3.13", "3.14"]'
+      pytest-args: --cov=maven_settings_decoder --cov-fail-under=80 --cov-branch --cov-report=xml --cov-report=term
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
