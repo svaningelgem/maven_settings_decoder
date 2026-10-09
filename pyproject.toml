@@ -23,7 +23,7 @@ maven-decoder = "maven_settings_decoder.__main__:main"
 
 [dependency-groups]
 dev = [
-    "ruff>=0.16.0,<0.17.0",
+    "ruff>=0.17.0,<0.18.0",
     "pytest-cov>=7.0.0,<8",
 ]
 
